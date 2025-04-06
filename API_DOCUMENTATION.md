@@ -1,319 +1,229 @@
-# API Documentation
+# Workspace Overview
 
-## Authentication
+## **Project Structure**
 
-### POST /auth/login
-```typescript
-Request:
-{
-  email: string;
-  password: string;
-}
-
-Response:
-{
-  accessToken: string;
-  refreshToken: string;
-  user: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-  }
-}
+```
+API_DOCUMENTATION.md
+api-test.http
+APPROACH.md
+DATABASE_SCHEMA.md
+deploy.js
+deploy.md
+eslint.config.mjs
+FINAL- AI CRM - LMS - ITINERARY BACKEND IMPLEMENTATION DOC (FOR CURSOR).md
+nest-cli.json
+package.json
+README.md
+ROADMAP.md
+start-app.js
+supabase-test.js
+TECHNICAL_ARCHITECTURE.md
+test-db.js
+tsconfig.build.json
+tsconfig.json
+logs/
+	combined.log
+	error.log
+prisma/
+	dev.db
+	dev.db-journal
+	schema.prisma
+	migrations/
+		add_ai_error_tracking.sql
+		migration_lock.toml
+		20240705000000_add_ai_error_tracking/
+		20250405075700_init/
+src/
+	app.controller.spec.ts
+	app.controller.ts
+	app.module.ts
+	app.service.ts
+	main.ts
+	minimal.ts
+	ai/
+		ai-cache.service.ts
+		ai-error-supabase.repository.ts
+		ai-error-tracker.factory.ts
+		ai-error-tracker.service.ts
+		ai.module.ts
+		ai.service.spec.ts
+		ai.service.ts
+		interfaces/
+	analytics/
+		analytics.controller.ts
+		analytics.module.ts
+		analytics.service.ts
+		pipes/
+	auth/
+		auth.controller.ts
+		auth.module.ts
+		auth.service.ts
+		decorators/
+		dto/
+		guards/
+		strategies/
+	bull/
+		bull.module.ts
+	common/
+		enums/
+	communication/
+		communication.module.ts
+	config/
+		config.module.ts
+		config.service.ts
+		configuration.ts
+		database.config.ts
+	customer-portal/
+		customer-portal.controller.ts
+		customer-portal.module.ts
+		customer-portal.service.ts
+	database/
+		database.decorators.ts
+		database.module.ts
+		migrations/
+	health/
+		health.controller.ts
+		health.module.ts
+		indicators/
+	itinerary/
+		itinerary.controller.ts
+		itinerary.module.ts
+		itinerary.service.spec.ts
+		itinerary.service.ts
+		dto/
+	lead/
+	leads/
+		leads.controller.ts
+		leads.module.ts
+		leads.service.spec.ts
+		leads.service.ts
+		dto/
+	logger/
+		logger.module.ts
+	metrics/
+		metrics.controller.ts
+		metrics.module.ts
+		metrics/
+	notifications/
+		notifications.controller.ts
+		notifications.gateway.ts
+		notifications.module.ts
+		...
+	offline-sync/
+		...
+	pdf/
+		...
+	pdf-theme/
+		...
+	prisma/
+		...
+	supabase/
+	test/
+	users/
+test/
+	api.spec.ts
+	app.e2e-spec.ts
+	jest-e2e.json
 ```
 
-### POST /auth/register
-```typescript
-Request:
-{
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  roleId: string;
-}
+---
 
-Response:
-{
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: string;
-}
-```
+## **Key Modules**
 
-## LMS Module
+### **1. AI Module**
+- **Files**:
+  - `ai-cache.service.ts`
+  - `ai-error-supabase.repository.ts`
+  - `ai-error-tracker.factory.ts`
+  - `ai-error-tracker.service.ts`
+  - `ai.module.ts`
+  - `ai.service.ts`
+- **Purpose**: Handles AI-related operations, error tracking, and caching.
 
-### Leads
+### **2. Analytics Module**
+- **Files**:
+  - `analytics.controller.ts`
+  - `analytics.module.ts`
+  - `analytics.service.ts`
+- **Purpose**: Provides analytics and reporting features.
 
-#### GET /leads
-Query Parameters:
-- page: number
-- limit: number
-- status: LeadStatus
-- search: string
-- assignedTo: string
+### **3. Auth Module**
+- **Files**:
+  - `auth.controller.ts`
+  - `auth.module.ts`
+  - `auth.service.ts`
+- **Purpose**: Manages authentication, authorization, and user sessions.
 
-Response:
-```typescript
-{
-  data: Lead[];
-  total: number;
-  page: number;
-  limit: number;
-}
-```
+### **4. Itinerary Module**
+- **Files**:
+  - `itinerary.controller.ts`
+  - `itinerary.module.ts`
+  - `itinerary.service.ts`
+- **Purpose**: Handles itinerary creation, updates, and management.
 
-#### POST /leads
-Request:
-```typescript
-{
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  source?: string;
-  assignedToId: string;
-}
-```
+### **5. Leads Module**
+- **Files**:
+  - `leads.controller.ts`
+  - `leads.module.ts`
+  - `leads.service.ts`
+- **Purpose**: Manages leads, including creation, updates, and retrieval.
 
-#### GET /leads/:id
-Response:
-```typescript
-{
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone?: string;
-  status: LeadStatus;
-  source?: string;
-  assignedTo: User;
-  notes: Note[];
-  quotes: Quote[];
-  createdAt: string;
-  updatedAt: string;
-}
-```
+### **6. Notifications Module**
+- **Files**:
+  - `notifications.controller.ts`
+  - `notifications.gateway.ts`
+  - `notifications.module.ts`
+- **Purpose**: Handles user notifications and real-time updates.
 
-#### PUT /leads/:id
-Request:
-```typescript
-{
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  phone?: string;
-  status?: LeadStatus;
-  source?: string;
-  assignedToId?: string;
-}
-```
+### **7. PDF Module**
+- **Files**: (Truncated)
+- **Purpose**: Generates PDFs for itineraries and other documents.
 
-### Notes
+### **8. Health Module**
+- **Files**:
+  - `health.controller.ts`
+  - `health.module.ts`
+- **Purpose**: Provides health checks for the application.
 
-#### POST /leads/:id/notes
-Request:
-```typescript
-{
-  content: string;
-}
-```
+---
 
-#### GET /leads/:id/notes
-Response:
-```typescript
-{
-  data: Note[];
-  total: number;
-}
-```
+## **Testing and Configuration**
 
-### Quotes
+### **Testing**
+- **Test Files**:
+  - `api.spec.ts`
+  - `app.e2e-spec.ts`
+- **Purpose**: End-to-end and API testing.
 
-#### POST /leads/:id/quotes
-Request:
-```typescript
-{
-  amount: number;
-  currency: string;
-  items: {
-    description: string;
-    quantity: number;
-    unitPrice: number;
-  }[];
-  validUntil?: string;
-}
-```
+### **Configuration**
+- **Files**:
+  - `config.module.ts`
+  - `config.service.ts`
+  - `configuration.ts`
+- **Purpose**: Centralized configuration management.
 
-#### GET /leads/:id/quotes
-Response:
-```typescript
-{
-  data: Quote[];
-  total: number;
-}
-```
+---
 
-## Itinerary Module
+## **Database**
+- **Files**:
+  - `schema.prisma`
+  - `migrations/`
+- **Purpose**: Defines the database schema and manages migrations.
 
-### Itineraries
+---
 
-#### POST /itineraries
-Request:
-```typescript
-{
-  title: string;
-  description?: string;
-  preferences?: {
-    budget?: number;
-    interests?: string[];
-    restrictions?: string[];
-  };
-}
-```
+## **Logs**
+- **Files**:
+  - `combined.log`
+  - `error.log`
+- **Purpose**: Stores application logs for debugging and monitoring.
 
-#### GET /itineraries/:id
-Response:
-```typescript
-{
-  id: string;
-  title: string;
-  description?: string;
-  status: ItineraryStatus;
-  activities: Activity[];
-  preferences?: Preference;
-  totalCost?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-```
+---
 
-#### POST /itineraries/:id/activities
-Request:
-```typescript
-{
-  title: string;
-  description?: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  cost?: number;
-}
-```
-
-### AI Features
-
-#### POST /itineraries/:id/ai-recommend
-Response:
-```typescript
-{
-  recommendations: {
-    activity: string;
-    location: string;
-    duration: string;
-    cost: number;
-    description: string;
-  }[];
-}
-```
-
-#### POST /itineraries/:id/optimize-route
-Response:
-```typescript
-{
-  optimizedActivities: Activity[];
-  totalCost: number;
-  totalDuration: string;
-}
-```
-
-## Admin Module
-
-### Analytics
-
-#### GET /admin/analytics
-Query Parameters:
-- period: string (daily, weekly, monthly)
-- startDate: string
-- endDate: string
-
-Response:
-```typescript
-{
-  leads: {
-    total: number;
-    byStatus: Record<LeadStatus, number>;
-    conversionRate: number;
-  };
-  quotes: {
-    total: number;
-    byStatus: Record<QuoteStatus, number>;
-    averageAmount: number;
-  };
-  itineraries: {
-    total: number;
-    byStatus: Record<ItineraryStatus, number>;
-    averageCost: number;
-  };
-}
-```
-
-### User Management
-
-#### GET /admin/users
-Response:
-```typescript
-{
-  data: User[];
-  total: number;
-}
-```
-
-#### POST /admin/users
-Request:
-```typescript
-{
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  roleId: string;
-}
-```
-
-## Customer Portal
-
-### GET /portal/itineraries/:id
-Response:
-```typescript
-{
-  id: string;
-  title: string;
-  description?: string;
-  activities: Activity[];
-  totalCost?: number;
-  status: ItineraryStatus;
-}
-```
-
-### POST /portal/itineraries/:id/feedback
-Request:
-```typescript
-{
-  rating: number;
-  comment?: string;
-}
-```
-
-### POST /portal/itineraries/:id/approve
-Response:
-```typescript
-{
-  success: boolean;
-  message: string;
-}
-``` 
+## **Scripts**
+- **Files**:
+  - `deploy.js`
+  - `start-app.js`
+  - `supabase-test.js`
+  - `test-db.js`
+- **Purpose**: Utility scripts for deployment, testing, and database operations.

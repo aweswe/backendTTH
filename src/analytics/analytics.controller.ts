@@ -3,13 +3,16 @@ import {
   Get,
   UseGuards,
   Query,
-  ParseDatePipe,
 } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ParseDatePipe } from './pipes/parse-date.pipe';
+
+// Create instance of the pipe outside the class
+const parseDatePipe = new ParseDatePipe();
 
 @ApiTags('Analytics')
 @Controller('analytics')
@@ -33,8 +36,8 @@ export class AnalyticsController {
   @ApiQuery({ name: 'startDate', type: Date, required: true })
   @ApiQuery({ name: 'endDate', type: Date, required: true })
   getSalesTimeline(
-    @Query('startDate', ParseDatePipe) startDate: Date,
-    @Query('endDate', ParseDatePipe) endDate: Date,
+    @Query('startDate', parseDatePipe) startDate: Date,
+    @Query('endDate', parseDatePipe) endDate: Date,
   ) {
     return this.analyticsService.getSalesTimeline(startDate, endDate);
   }
@@ -46,8 +49,8 @@ export class AnalyticsController {
   @ApiQuery({ name: 'startDate', type: Date, required: true })
   @ApiQuery({ name: 'endDate', type: Date, required: true })
   getTeamPerformance(
-    @Query('startDate', ParseDatePipe) startDate: Date,
-    @Query('endDate', ParseDatePipe) endDate: Date,
+    @Query('startDate', parseDatePipe) startDate: Date,
+    @Query('endDate', parseDatePipe) endDate: Date,
   ) {
     return this.analyticsService.getTeamPerformance(startDate, endDate);
   }

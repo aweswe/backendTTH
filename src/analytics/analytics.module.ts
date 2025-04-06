@@ -14,7 +14,9 @@ import { AiModule } from '../ai/ai.module';
     AiModule,
   ],
   controllers: [AnalyticsController],
-  providers: [AnalyticsService],
+  providers: [
+    AnalyticsService,
+  ],
   exports: [AnalyticsService],
 })
 export class AnalyticsModule {} 

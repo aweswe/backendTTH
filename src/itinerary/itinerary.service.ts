@@ -1,29 +1,33 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateItineraryDto } from './dto/create-itinerary.dto';
 import { UpdateItineraryDto } from './dto/update-itinerary.dto';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
 import { AiService } from '../ai/ai.service';
 import { PdfService } from '../pdf/pdf.service';
+import { ActivityDto } from './dto/activity.dto';
 
 @Injectable()
 export class ItineraryService {
   constructor(
     private prisma: PrismaService,
-    @InjectQueue('itinerary') private itineraryQueue: Queue,
     private aiService: AiService,
     private pdfService: PdfService,
   ) {}
 
   async create(createItineraryDto: CreateItineraryDto) {
     const { activities, ...itineraryData } = createItineraryDto;
-
-    const itinerary = await this.prisma.itinerary.create({
+    
+    return this.prisma.itinerary.create({
       data: {
         ...itineraryData,
         activities: {
-          create: activities,
+          create: activities.map((activity: ActivityDto) => ({
+            name: activity.name,
+            description: activity.description,
+            location: activity.location,
+            startTime: activity.startTime,
+            endTime: activity.endTime,
+          })),
         },
       },
       include: {
@@ -31,14 +35,6 @@ export class ItineraryService {
         lead: true,
       },
     });
-
-    // Queue AI analysis for optimization
-    await this.itineraryQueue.add('optimize', {
-      itineraryId: itinerary.id,
-      data: createItineraryDto,
-    });
-
-    return itinerary;
   }
 
   async findAll() {
@@ -51,6 +47,55 @@ export class ItineraryService {
   }
 
   async findOne(id: string) {
+    return this.prisma.itinerary.findUnique({
+      where: { id },
+      include: {
+        activities: true,
+        lead: true,
+      },
+    });
+  }
+
+  async update(id: string, updateItineraryDto: UpdateItineraryDto) {
+    const { activities, ...itineraryData } = updateItineraryDto;
+    
+    return this.prisma.itinerary.update({
+      where: { id },
+      data: {
+        ...itineraryData,
+        activities: activities ? {
+          deleteMany: {},
+          create: activities.map((activity: ActivityDto) => ({
+            name: activity.name,
+            description: activity.description,
+            location: activity.location,
+            startTime: activity.startTime,
+            endTime: activity.endTime,
+          })),
+        } : undefined,
+      },
+      include: {
+        activities: true,
+        lead: true,
+      },
+    });
+  }
+
+  async remove(id: string) {
+    return this.prisma.itinerary.delete({
+      where: { id },
+    });
+  }
+
+  async generatePdf(id: string, themeId?: string) {
+    const itinerary = await this.findOne(id);
+    if (!itinerary) {
+      throw new Error('Itinerary not found');
+    }
+    return this.pdfService.generateItineraryPdf(id, themeId);
+  }
+
+  async optimizeRoute(id: string) {
     const itinerary = await this.prisma.itinerary.findUnique({
       where: { id },
       include: {
@@ -60,64 +105,33 @@ export class ItineraryService {
     });
 
     if (!itinerary) {
-      throw new NotFoundException(`Itinerary with ID ${id} not found`);
+      throw new Error('Itinerary not found');
     }
 
-    return itinerary;
-  }
-
-  async update(id: string, updateItineraryDto: UpdateItineraryDto) {
-    const { activities, ...itineraryData } = updateItineraryDto;
-
-    const itinerary = await this.prisma.itinerary.update({
-      where: { id },
-      data: {
-        ...itineraryData,
-        activities: activities
-          ? {
-              deleteMany: {},
-              create: activities,
-            }
-          : undefined,
-      },
-      include: {
-        activities: true,
-        lead: true,
-      },
+    const optimizedActivities = await this.aiService.optimizeItineraryRoute({
+      id: itinerary.id,
+      name: itinerary.name,
+      startDate: itinerary.startDate,
+      endDate: itinerary.endDate,
+      leadId: itinerary.leadId,
+      userId: itinerary.userId,
+      status: itinerary.status,
+      createdAt: itinerary.createdAt,
+      updatedAt: itinerary.updatedAt,
     });
-
-    // Queue AI analysis if significant changes
-    if (this.isSignificantChange(updateItineraryDto)) {
-      await this.itineraryQueue.add('optimize', {
-        itineraryId: itinerary.id,
-        data: updateItineraryDto,
-      });
-    }
-
-    return itinerary;
-  }
-
-  async remove(id: string) {
-    return this.prisma.itinerary.delete({
-      where: { id },
-    });
-  }
-
-  async generatePdf(id: string, theme?: string) {
-    const itinerary = await this.findOne(id);
-    return this.pdfService.generateItineraryPdf(itinerary, theme);
-  }
-
-  async optimizeRoute(id: string) {
-    const itinerary = await this.findOne(id);
-    const optimizedActivities = await this.aiService.optimizeItineraryRoute(itinerary);
     
     return this.prisma.itinerary.update({
       where: { id },
       data: {
         activities: {
           deleteMany: {},
-          create: optimizedActivities,
+          create: optimizedActivities.map((activity: ActivityDto) => ({
+            name: activity.name,
+            description: activity.description,
+            location: activity.location,
+            startTime: activity.startTime,
+            endTime: activity.endTime,
+          })),
         },
       },
       include: {
@@ -129,14 +143,19 @@ export class ItineraryService {
 
   async calculateCost(id: string) {
     const itinerary = await this.findOne(id);
-    return this.aiService.calculateItineraryCost(itinerary);
-  }
-
-  private isSignificantChange(updateItineraryDto: UpdateItineraryDto): boolean {
-    return (
-      updateItineraryDto.activities !== undefined ||
-      updateItineraryDto.startDate !== undefined ||
-      updateItineraryDto.endDate !== undefined
-    );
+    if (!itinerary) {
+      throw new Error('Itinerary not found');
+    }
+    return this.aiService.calculateItineraryCost({
+      id: itinerary.id,
+      name: itinerary.name,
+      startDate: itinerary.startDate,
+      endDate: itinerary.endDate,
+      leadId: itinerary.leadId,
+      userId: itinerary.userId,
+      status: itinerary.status,
+      createdAt: itinerary.createdAt,
+      updatedAt: itinerary.updatedAt,
+    });
   }
 } 

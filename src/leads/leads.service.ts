@@ -2,36 +2,49 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
-import { LeadStatus } from '@prisma/client';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
 import { AiService } from '../ai/ai.service';
+import { SimpleLead } from '../ai/ai.service';
 
 @Injectable()
 export class LeadsService {
   constructor(
     private prisma: PrismaService,
-    @InjectQueue('leads') private leadsQueue: Queue,
     private aiService: AiService,
   ) {}
 
   async create(createLeadDto: CreateLeadDto) {
     const lead = await this.prisma.lead.create({
       data: {
-        ...createLeadDto,
-        status: LeadStatus.NEW,
+        status: 'NEW',
+        assignedUser: {
+          connect: { id: createLeadDto.assignedToId },
+        },
+        firstName: createLeadDto.firstName,
+        lastName: createLeadDto.lastName,
+        email: createLeadDto.email,
+        phone: createLeadDto.phone,
+        source: createLeadDto.source,
+        userId: createLeadDto.userId,
       },
       include: {
-        assignedTo: true,
-        notes: true,
-        quotes: true,
+        assignedUser: true,
       },
     });
 
-    // Queue AI analysis
-    await this.leadsQueue.add('analyze', {
-      leadId: lead.id,
-      data: createLeadDto,
+    // Generate AI summary
+    const summary = await this.aiService.generateLeadSummary({
+      id: lead.id,
+      firstName: lead.firstName,
+      lastName: lead.lastName,
+      email: lead.email,
+      company: lead.company || undefined,
+      status: lead.status,
+      notes: [],
+    });
+
+    await this.prisma.lead.update({
+      where: { id: lead.id },
+      data: { aiSummary: summary },
     });
 
     return lead;
@@ -40,50 +53,31 @@ export class LeadsService {
   async findAll() {
     return this.prisma.lead.findMany({
       include: {
-        assignedTo: true,
+        assignedUser: true,
         notes: true,
-        quotes: true,
       },
     });
   }
 
   async findOne(id: string) {
-    const lead = await this.prisma.lead.findUnique({
+    return this.prisma.lead.findUnique({
       where: { id },
       include: {
-        assignedTo: true,
+        assignedUser: true,
         notes: true,
-        quotes: true,
       },
     });
-
-    if (!lead) {
-      throw new NotFoundException(`Lead with ID ${id} not found`);
-    }
-
-    return lead;
   }
 
   async update(id: string, updateLeadDto: UpdateLeadDto) {
-    const lead = await this.prisma.lead.update({
+    return this.prisma.lead.update({
       where: { id },
       data: updateLeadDto,
       include: {
-        assignedTo: true,
+        assignedUser: true,
         notes: true,
-        quotes: true,
       },
     });
-
-    // Queue AI analysis if significant changes
-    if (this.isSignificantChange(updateLeadDto)) {
-      await this.leadsQueue.add('analyze', {
-        leadId: lead.id,
-        data: updateLeadDto,
-      });
-    }
-
-    return lead;
   }
 
   async remove(id: string) {
@@ -93,30 +87,57 @@ export class LeadsService {
   }
 
   async addNote(leadId: string, content: string, userId: string) {
-    return this.prisma.note.create({
-      data: {
-        content,
-        leadId,
-        userId,
-      },
-    });
-  }
-
-  async generateAiSummary(leadId: string) {
-    const lead = await this.findOne(leadId);
-    const summary = await this.aiService.generateLeadSummary(lead);
-    
     return this.prisma.lead.update({
       where: { id: leadId },
-      data: { aiSummary: summary },
+      data: {
+        notes: {
+          create: {
+            content,
+            userId
+          }
+        }
+      },
+      include: { notes: true }
     });
   }
 
-  private isSignificantChange(updateLeadDto: UpdateLeadDto): boolean {
-    return (
-      updateLeadDto.status !== undefined ||
-      updateLeadDto.assignedToId !== undefined ||
-      updateLeadDto.email !== undefined
-    );
+  async getNotes(leadId: string) {
+    const lead = await this.prisma.lead.findUnique({
+      where: { id: leadId },
+      include: {
+        notes: {
+          include: {
+            user: true
+          }
+        }
+      }
+    });
+    return lead?.notes || [];
+  }
+
+  async generateAiSummary(id: string) {
+    const lead = await this.prisma.lead.findUnique({
+      where: { id },
+      include: {
+        notes: true,
+        assignedUser: true
+      }
+    });
+
+    if (!lead) {
+      throw new NotFoundException(`Lead with ID ${id} not found`);
+    }
+
+    const simpleLead: SimpleLead = {
+      id: lead.id,
+      firstName: lead.firstName,
+      lastName: lead.lastName,
+      email: lead.email,
+      company: lead.company || undefined,
+      status: lead.status,
+      notes: lead.notes.map(note => ({ content: note.content })),
+    };
+
+    return this.aiService.generateLeadSummary(simpleLead);
   }
 } 

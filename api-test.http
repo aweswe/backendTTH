@@ -1,0 +1,16 @@
+### Test Root Endpoint
+GET http://localhost:3000/
+
+### Test Metrics Endpoint
+GET http://localhost:3000/metrics
+
+### Test Health Endpoint
+GET http://localhost:3000/health
+
+### Test users endpoint (requires auth)
+# GET http://localhost:3000/users
+# Authorization: Bearer YOUR_JWT_TOKEN
+
+### Test notifications endpoint (requires auth)
+# GET http://localhost:3000/notifications
+# Authorization: Bearer YOUR_JWT_TOKEN 

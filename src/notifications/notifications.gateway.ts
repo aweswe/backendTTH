@@ -7,7 +7,6 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger } from '@nestjs/common';
-import { NotificationsService } from './notifications.service';
 
 @WebSocketGateway({
   cors: {
@@ -19,7 +18,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   private logger: Logger = new Logger('NotificationsGateway');
   private userSockets: Map<string, Socket> = new Map();
 
-  constructor(private readonly notificationsService: NotificationsService) {}
+  constructor() {}
 
   handleConnection(client: Socket) {
     const userId = client.handshake.query.userId as string;

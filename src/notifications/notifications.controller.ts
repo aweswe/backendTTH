@@ -7,12 +7,14 @@ import {
   Param,
   Body,
   UseGuards,
+  NotFoundException,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { User } from '../auth/decorators/user.decorator';
 
 @ApiTags('Notifications')
 @Controller('notifications')
@@ -31,13 +33,21 @@ export class NotificationsController {
 
   @Put(':id/read')
   @Roles('user', 'admin')
-  @ApiOperation({ summary: 'Mark a notification as read' })
+  @ApiOperation({ summary: 'Mark notification as read' })
   @ApiResponse({ status: 200, description: 'Notification marked as read' })
-  markAsRead(
+  async markAsRead(
     @Param('id') notificationId: string,
-    @Body('userId') userId: string,
+    @User('id') userId: string,
   ) {
-    return this.notificationsService.markAsRead(notificationId, userId);
+    // First validate that the notification belongs to the user
+    const notification = await this.notificationsService.findOne(notificationId);
+    
+    if (!notification || notification.userId !== userId) {
+      throw new NotFoundException('Notification not found');
+    }
+    
+    // Now just pass the ID to the mark as read method
+    return this.notificationsService.markAsRead(notificationId);
   }
 
   @Put('read-all')
